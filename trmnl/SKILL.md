@@ -5,230 +5,230 @@ description: Generate content for TRMNL e-ink display devices using the TRMNL CS
 
 # TRMNL Content Generator
 
-Generate HTML content for TRMNL e-ink display devices using the TRMNL CSS framework and webhook API.
+Generate HTML content for TRMNL e-ink display devices.
 
 ## Quick Start Workflow
 
 1. Check for `$TRMNL_WEBHOOK` environment variable
 2. If missing, prompt user for webhook URL
-3. Confirm device type (default: TRMNL OG, 2-bit, 800x480)
-4. Read relevant reference docs based on content needs
-5. Generate HTML using TRMNL framework classes
-6. Send via POST to webhook with `{"merge_variables": {"content": "HTML"}}`
+3. **Ask user to verify TRMNL display markup is set to:** `<div>{{content}}</div>`
+4. Confirm device type (default: TRMNL OG, 2-bit, 800x480)
+5. Read relevant reference docs based on content needs
+6. Generate HTML using TRMNL framework classes
+7. Send via POST to webhook (use temp file method)
+8. **Send minimal confirmation only** - Do NOT echo content back to chat
 
-## Device Assumptions
+## Device & Setup
 
-**Default target:** TRMNL OG
-- Display: 7.5" e-ink
-- Resolution: 800x480px (landscape)
-- Bit depth: 2-bit (4 grayscale levels)
+**Default target:** TRMNL OG (7.5" e-ink, 800x480px, 2-bit)
 
-**Prompt user if different:** Ask about device type, resolution, or bit depth if layout requires specific capabilities (e.g., 4-bit features, larger resolution).
+**Display markup required:**
+```html
+<div>{{content}}</div>
+```
 
-## Webhook Configuration
-
-### Environment Variable (Recommended)
+**Webhook:**
 ```bash
 export TRMNL_WEBHOOK="https://trmnl.com/api/custom_plugins/{uuid}"
 ```
 
-Check with: `echo $TRMNL_WEBHOOK`
-
-### Direct Usage
-If ENV variable not set, prompt user for webhook URL.
-
-### Sending Content
+**Sending content (temp file method):**
 ```bash
-curl "$TRMNL_WEBHOOK" \
-  -H "Content-Type: application/json" \
-  -d '{"merge_variables": {"content": "<div class=\"layout\">HTML</div>"}}' \
-  -X POST
+cat > /tmp/trmnl.json << 'EOF'
+{"merge_variables":{"content":"<div class=\"layout\">HTML</div>"}}
+EOF
+curl "$TRMNL_WEBHOOK" -H "Content-Type: application/json" -d @/tmp/trmnl.json -X POST
 ```
 
-**Important:** Escape quotes in JSON strings when using cURL.
+## Webhook Limits
+
+| Tier | Payload Size | Rate Limit |
+|------|--------------|------------|
+| Free | **2 KB** (2,048 bytes) | 12 requests/hour |
+| TRMNL+ | **5 KB** (5,120 bytes) | 30 requests/hour |
+
+**Check payload size before sending:**
+```bash
+python3 scripts/check_payload.py /tmp/trmnl.json
+```
+
+**Tips to reduce payload size:**
+- Minify HTML (remove unnecessary whitespace)
+- Use framework classes instead of inline styles
+- Use short class names the framework provides
+- Remove comments from HTML
+- Use `deep_merge` strategy for incremental updates
 
 ## Reference Documentation
 
-Read these files as needed based on content requirements:
+Read these files as needed:
 
-### framework-overview.md
-Read when:
-- First time using skill
-- Need device specifications
-- Understanding e-ink constraints
-- Responsive breakpoints (`sm:`, `md:`, `lg:`)
-- Bit-depth variants (`1bit:`, `2bit:`, `4bit:`)
+| File | When to Read |
+|------|--------------|
+| `references/patterns.md` | **Start here** - Common plugin patterns from official examples |
+| `references/framework-overview.md` | Device specs, e-ink constraints, responsive prefixes |
+| `references/css-utilities.md` | Colors, typography, sizing, spacing utilities |
+| `references/layout-systems.md` | Flexbox, grid, overflow/clamp engines |
+| `references/components.md` | Title bar, dividers, items, tables, charts |
+| `references/webhook-api.md` | Payload format, rate limits, troubleshooting |
+| `assets/anti-patterns.md` | Common mistakes to avoid |
+| `assets/good-examples/` | HTML reference implementations |
 
-### css-utilities.md
-Read when needing:
-- Colors (`bg--gray-40`, `text--black`)
-- Typography (`value--xlarge`, `label`, `title`, `description`)
-- Sizing (`w--48`, `h--full`, `w--[200px]`)
-- Spacing (`p--4`, `m--8`, `gap--large`)
-- Borders, rounded corners
-- Visibility utilities
+**Scripts:**
+| Script | Purpose |
+|--------|---------|
+| `scripts/check_payload.py` | Verify payload size before sending (run on /tmp/trmnl.json) |
 
-### layout-systems.md
-Read when building:
-- Flexbox layouts (`flex`, `flex--col`, `flex--center`)
-- Grid layouts (`grid--cols-2`, `col--span-3`)
-- Responsive layouts
-- Dynamic content (Overflow, Clamp, Content Limiter engines)
+## Standard Plugin Structure
 
-### components.md
-Read when using:
-- Screen, View, Layout containers
-- Title Bar component
-- Dividers
-- Rich Text blocks
-- Item components (with meta/index)
-- Tables
-- Progress bars or dots
-- Charts (Highcharts)
+**Every plugin follows this pattern:**
 
-### webhook-api.md
-Read when:
-- Understanding payload format
-- Using merge strategies (default, deep_merge, stream)
-- Handling rate limits (12/hour free, 360/hour TRMNL+)
-- Optimizing payload size (2KB limit)
-- Troubleshooting errors
-
-## Example Assets
-
-See `assets/good-examples/` for reference implementations:
-- `simple-message.html` - Centered text with divider
-- `two-column-image.html` - Grid with text and image
-- `task-list.html` - Item components with index
-- `stats-dashboard.html` - Grid with progress bar
-- `table-data.html` - Table with overflow handling
-
-See `assets/anti-patterns.md` for common mistakes to avoid.
-
-## Key Guidelines
-
-### HTML Structure
-- Use TRMNL framework classes over inline styles
-- Wrap content in semantic containers (`layout`, `grid`, `item`)
-- Use proper typography elements (`title`, `value`, `label`, `description`)
-- Table cells must wrap text: `<th><span class="title">...</span></th>`
-
-### E-ink Optimization
-- Keep content concise (limited screen space)
-- Use `image-dither` class for images
-- Avoid animations, transformations, filters
-- Use high contrast (black/white preferred)
-- Apply `data-clamp="N"` to limit text lines
-
-### Payload Management
-- Minify HTML (remove whitespace): `{"merge_variables":{"content":"<div class=\"layout\">...</div>"}}`
-- Keep under 2KB (free tier) or 5KB (TRMNL+)
-- Use framework classes (shorter than inline styles)
-- Compress large payloads if needed (see webhook-api.md)
-
-### Responsive Design
-- Mobile-first approach (styles cascade upward)
-- Use breakpoint prefixes: `sm:`, `md:`, `lg:`
-- Use orientation: `portrait:`, `landscape:`
-- Use bit-depth variants: `1bit:`, `2bit:`, `4bit:`
-- Combined: `md:portrait:4bit:gap--large`
-
-### Images
-- Must be publicly accessible URLs (https://)
-- Use `image-dither` for grayscale optimization
-- Consider `image--contain` or `image--cover` for sizing
-- Add `rounded--large` for softer edges
-
-### Layout Engines
-- **Overflow:** Distribute items across columns with height limit
-  - `data-overflow="true" data-overflow-max-height="400"`
-- **Clamp:** Truncate text to N lines
-  - `data-clamp="2"`
-- **Content Limiter:** Auto-adjust text size when overflow
-  - `data-content-limiter="true"`
-- **Table Limit:** Show "and X more" for long tables
-  - `data-table-limit="true"`
-
-## Common Patterns
-
-### Centered Message
 ```html
-<div class="layout layout--col layout--center gap--large" style="height: 100%; padding: 40px;">
-  <span class="value value--xxlarge text--center">Title</span>
-  <span class="description text--center">Message</span>
+<div class="layout layout--col gap--space-between">
+  <!-- Content sections separated by dividers -->
+</div>
+<div class="title_bar">
+  <img class="image" src="icon.svg">
+  <span class="title">Plugin Name</span>
+  <span class="instance">Context</span>
 </div>
 ```
 
-### Two-Column with Image
+- `layout` + `layout--col` = vertical flex container
+- `gap--space-between` = push sections to edges
+- `title_bar` = always at bottom, outside layout
+- `divider` = separate major sections
+
+## Grid System (10-Column)
+
+Column spans should sum to 10:
+
 ```html
-<div class="grid grid--cols-2 gap--xlarge" style="padding: 32px; height: 100%;">
-  <div class="col col--center">
-    <span class="title">Text Content</span>
-  </div>
-  <div class="col col--center row--end">
-    <img src="https://example.com/image.png" class="image-dither rounded--large" style="max-width: 100%;" />
+<div class="grid">
+  <div class="col--span-3">30%</div>
+  <div class="col--span-7">70%</div>
+</div>
+```
+
+Simple equal columns: `grid--cols-2`, `grid--cols-3`, etc.
+
+## Item Component
+
+Standard data display pattern:
+
+```html
+<div class="item">
+  <div class="meta"><span class="index">1</span></div>
+  <div class="content">
+    <span class="value value--xlarge value--tnums">$159,022</span>
+    <span class="label">Total Sales</span>
   </div>
 </div>
 ```
 
-### Stats Grid
+## Value Typography
+
+**Always use `value--tnums` for numbers.**
+
+| Class | Usage |
+|-------|-------|
+| `value--xxxlarge` | Hero KPIs |
+| `value--xxlarge` | Large prices |
+| `value--xlarge` | Secondary metrics |
+| `value--small` | Tertiary data |
+| `value--tnums` | **Always for numbers** |
+
+Auto-fit: `<span class="value" data-fit-value="true">...</span>`
+
+## Columns (for Lists)
+
 ```html
-<div class="grid grid--cols-2 gap--large">
-  <div class="item item--emphasis-1">
-    <div class="content">
-      <span class="value value--xlarge">1,247</span>
-      <span class="label">Metric Name</span>
-    </div>
+<div class="columns">
+  <div class="column" data-overflow="true" data-overflow-counter="true">
+    <span class="label label--medium group-header">Section</span>
+    <div class="item">...</div>
   </div>
-  <!-- Repeat for more stats -->
 </div>
 ```
 
-### List with Items
+## Grayscale Dithering
+
+Use dithered classes, not inline gray colors:
+- `bg--black`, `bg--gray-60`, `bg--gray-30`, `bg--gray-10`, `bg--white`
+- `text--black`, `text--gray-50`
+
+## Data Attributes
+
+| Attribute | Purpose |
+|-----------|---------|
+| `data-fit-value="true"` | Auto-resize text to fit |
+| `data-clamp="N"` | Limit to N lines |
+| `data-overflow="true"` | Enable overflow management |
+| `data-overflow-counter="true"` | Show "and X more" |
+| `data-content-limiter="true"` | Auto-adjust text size |
+| `data-pixel-perfect="true"` | Crisp text rendering |
+
+## Label & Title Variants
+
 ```html
-<div class="layout layout--col gap--medium">
-  <div class="item">
-    <div class="meta">
-      <span class="index">1</span>
-    </div>
-    <div class="content">
-      <span class="label">Item Title</span>
-      <span class="description" data-clamp="1">Description</span>
-    </div>
-  </div>
-  <!-- More items -->
-</div>
+<span class="label label--small">Small</span>
+<span class="label label--medium">Medium</span>
+<span class="label label--underline">Underlined</span>
+<span class="label label--gray">Muted/completed</span>
+<span class="title title--small">Compact title</span>
 ```
 
-## Response Handling
+## Gap Utilities
 
-### Success
-```json
-{"message": null, "merge_variables": {"content": "..."}}
-```
-Confirm to user that content was sent.
+`gap--space-between` | `gap--xxlarge` | `gap--xlarge` | `gap--large` | `gap--medium` | `gap` | `gap--small` | `gap--xsmall` | `gap--none`
 
-### Error
-```json
-{"message": "Error description", "merge_variables": null}
-```
-Inform user of the error and suggest fixes.
+## Typography Guidelines
 
-## Best Practices Summary
+**Recommended:** Georgia serif font for e-ink readability.
 
-1. **Framework classes first** - Avoid inline styles when framework classes exist
-2. **Read docs as needed** - Don't load all references upfront, read when relevant
-3. **Test assumptions** - Confirm device type if layout relies on specific capabilities
-4. **Optimize payloads** - Minify HTML, use framework classes
-5. **E-ink aware** - High contrast, static content, dithered images
-6. **Use layout engines** - Overflow, Clamp, Content Limiter for adaptive layouts
-7. **Responsive patterns** - Mobile-first with breakpoint prefixes
-8. **Check ENV first** - Look for `$TRMNL_WEBHOOK` before prompting user
+**Content-aware sizing:**
+- Short content = bigger fonts (24-28px body)
+- Long content = smaller fonts (20px body)
+- Headings: 36-48px
+
+## User Experience
+
+**Critical:** Do NOT echo content back to chat. Just confirm "Sent to TRMNL".
+
+## Anti-Patterns
+
+1. Tiny fonts for short content
+2. Center-aligning columns with different lengths (use `layout--start`)
+3. Spoiling content in chat confirmation
+4. Missing `value--tnums` on numbers
+5. Missing `title_bar`
+6. Not using `data-fit-value` on primary metrics
+7. Skipping `data-overflow` on variable lists
+8. Using inline gray colors instead of `bg--gray-*`
+9. Forgetting dividers between sections
+
+## Best Practices
+
+1. Verify `<div>{{content}}</div>` display markup
+2. Use `layout` + `title_bar` structure
+3. Always `value--tnums` for numbers
+4. Use `data-fit-value` on primary metrics
+5. Use `data-overflow` on variable lists
+6. Use `item` component pattern
+7. Use `divider` between sections
+8. Use `bg--gray-*` dithered classes
+9. Content-aware font sizing
+10. Top-align columns (`layout--start`)
+11. Temp file method for curl
+12. Minimal confirmations
 
 ## Troubleshooting
 
-**Webhook fails:** Verify URL format, check rate limits (see webhook-api.md)
-**Content doesn't display:** Check payload size (<2KB), validate JSON syntax
-**Layout breaks:** Review anti-patterns.md, ensure proper framework class usage
-**Images missing:** Verify public URLs, add `image-dither` class
-**Text overflow:** Use `data-clamp` or Overflow engine with max-height
+| Problem | Solution |
+|---------|----------|
+| Webhook fails | Verify URL, check rate limits (12/hour free) |
+| Content missing | Check display markup is `<div>{{content}}</div>` |
+| Payload too large | Run `scripts/check_payload.py`, keep under 2KB (free) or 5KB (TRMNL+) |
+| Numbers misaligned | Add `value--tnums` |
+| Text overflow | Use `data-clamp` or `data-overflow` |
+| Columns misaligned | Use `layout--start` not `layout--center` |
