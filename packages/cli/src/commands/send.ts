@@ -14,6 +14,7 @@ interface SendOptions {
   webhook?: string;
   skipValidation?: boolean;
   skipLog?: boolean;
+  noMinify?: boolean;
   json?: boolean;
 }
 
@@ -26,6 +27,7 @@ export function registerSendCommand(cli: CAC): void {
     .option('-w, --webhook <url>', 'Override webhook URL directly')
     .option('--skip-validation', 'Skip payload validation')
     .option('--skip-log', 'Skip history logging')
+    .option('--no-minify', 'Disable HTML minification (enabled by default)')
     .option('--json', 'Output result as JSON')
     .example('trmnl send --content "<div class=\\"layout\\">Hello</div>"')
     .example('trmnl send --file ./output.html')
@@ -53,8 +55,8 @@ export function registerSendCommand(cli: CAC): void {
         }
       }
 
-      // Create payload
-      const payload = createPayload(content);
+      // Create payload (minified by default to maximize usable payload space)
+      const payload = createPayload(content, { minify: !options.noMinify });
 
       // Send
       const result = await sendToWebhook(payload, {

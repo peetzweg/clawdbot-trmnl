@@ -61,22 +61,63 @@ export function validatePayload(payload: WebhookPayload, tier: WebhookTier = 'fr
 }
 
 /**
+ * Minify HTML content to reduce payload size.
+ *
+ * Strips whitespace that has no effect on rendered output:
+ *  - HTML comments
+ *  - Whitespace between tags (> ... <)
+ *  - Leading/trailing whitespace
+ *  - Runs of whitespace collapsed to a single space
+ */
+export function minifyHtml(html: string): string {
+  return html
+    // Remove HTML comments
+    .replace(/<!--[\s\S]*?-->/g, '')
+    // Collapse whitespace between tags
+    .replace(/>\s+</g, '><')
+    // Collapse remaining runs of whitespace to a single space
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+}
+
+/**
+ * Minify all HTML string values in a merge_variables object.
+ * Only minifies values that look like HTML (contain '<' and '>').
+ */
+function minifyMergeVariables(vars: Record<string, string | undefined>): Record<string, string | undefined> {
+  const result: Record<string, string | undefined> = {};
+  for (const [key, value] of Object.entries(vars)) {
+    if (typeof value === 'string' && value.includes('<') && value.includes('>')) {
+      result[key] = minifyHtml(value);
+    } else {
+      result[key] = value;
+    }
+  }
+  return result;
+}
+
+/**
  * Parse content into a webhook payload
  */
-export function createPayload(content: string): WebhookPayload {
+export function createPayload(content: string, options: { minify?: boolean } = {}): WebhookPayload {
+  const shouldMinify = options.minify !== false; // default: true
+
   // Try to parse as JSON first
   try {
     const parsed = JSON.parse(content);
-    if (parsed.merge_variables) {
-      return parsed as WebhookPayload;
+    const payload: WebhookPayload = parsed.merge_variables
+      ? (parsed as WebhookPayload)
+      : { merge_variables: parsed };
+
+    if (shouldMinify) {
+      payload.merge_variables = minifyMergeVariables(payload.merge_variables) as WebhookPayload['merge_variables'];
     }
-    // If it's just merge_variables content
-    return { merge_variables: parsed };
+    return payload;
   } catch {
     // Treat as raw HTML content
     return {
       merge_variables: {
-        content: content,
+        content: shouldMinify ? minifyHtml(content) : content,
       },
     };
   }

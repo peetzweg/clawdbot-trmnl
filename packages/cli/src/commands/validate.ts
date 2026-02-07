@@ -12,6 +12,7 @@ interface ValidateOptions {
   content?: string;
   file?: string;
   tier?: WebhookTier;
+  noMinify?: boolean;
   json?: boolean;
 }
 
@@ -21,6 +22,7 @@ export function registerValidateCommand(cli: CAC): void {
     .option('-c, --content <html>', 'HTML content to validate')
     .option('-f, --file <path>', 'Read content from file')
     .option('-t, --tier <tier>', 'Override tier (free or plus)')
+    .option('--no-minify', 'Disable HTML minification (enabled by default)')
     .option('--json', 'Output result as JSON')
     .example('trmnl validate --file ./output.html')
     .example('trmnl validate --content "<div>...</div>" --tier plus')
@@ -49,8 +51,8 @@ export function registerValidateCommand(cli: CAC): void {
       // Use explicit tier or global config
       const tier = options.tier || getTier();
 
-      // Create payload and validate
-      const payload = createPayload(content);
+      // Create payload (minified by default to maximize usable payload space)
+      const payload = createPayload(content, { minify: !options.noMinify });
       const result = validatePayload(payload, tier);
 
       // Output
