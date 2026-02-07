@@ -10,6 +10,7 @@ import { sendToWebhook } from '../lib/webhook.ts';
 interface SendOptions {
   content?: string;
   file?: string;
+  plugin?: string;
   webhook?: string;
   skipValidation?: boolean;
   skipLog?: boolean;
@@ -21,12 +22,14 @@ export function registerSendCommand(cli: CAC): void {
     .command('send', 'Send content to TRMNL display')
     .option('-c, --content <html>', 'HTML content to send')
     .option('-f, --file <path>', 'Read content from file')
-    .option('-w, --webhook <url>', 'Override webhook URL')
+    .option('-p, --plugin <name>', 'Plugin to use (default: default plugin)')
+    .option('-w, --webhook <url>', 'Override webhook URL directly')
     .option('--skip-validation', 'Skip payload validation')
     .option('--skip-log', 'Skip history logging')
     .option('--json', 'Output result as JSON')
     .example('trmnl send --content "<div class=\\"layout\\">Hello</div>"')
     .example('trmnl send --file ./output.html')
+    .example('trmnl send --file ./output.html --plugin office')
     .example('echo \'{"merge_variables":{"content":"..."}}\' | trmnl send')
     .action(async (options: SendOptions) => {
       let content: string;
@@ -55,9 +58,10 @@ export function registerSendCommand(cli: CAC): void {
 
       // Send
       const result = await sendToWebhook(payload, {
+        plugin: options.plugin,
+        webhookUrl: options.webhook,
         skipValidation: options.skipValidation,
         skipLog: options.skipLog,
-        webhookUrl: options.webhook,
       });
 
       // Output
@@ -65,13 +69,16 @@ export function registerSendCommand(cli: CAC): void {
         console.log(JSON.stringify(result, null, 2));
       } else {
         if (result.success) {
-          console.log('✓ Sent to TRMNL');
+          console.log(`✓ Sent to TRMNL (${result.pluginName})`);
           console.log(`  Status: ${result.statusCode}`);
           console.log(`  Time: ${result.durationMs}ms`);
           console.log(`  Size: ${result.validation.size_bytes} bytes (${result.validation.percent_used}% of limit)`);
         } else {
           console.error('✗ Failed to send');
           console.error(`  Error: ${result.error}`);
+          if (result.pluginName) {
+            console.error(`  Plugin: ${result.pluginName}`);
+          }
           console.log('');
           console.log('Validation:');
           console.log(formatValidation(result.validation));

@@ -1,17 +1,22 @@
 /**
- * Config file management for ~/.trmnl/config.toml
+ * Config file management for ~/.trmnl/config.json
+ * Supports multiple plugins with a default
  */
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync, unlinkSync } from 'node:fs';
 import { homedir } from 'node:os';
-import { dirname, join } from 'node:path';
-import type { Config, WebhookTier } from '../types.ts';
+import { join } from 'node:path';
+import type { Config, Plugin, WebhookTier } from '../types.ts';
+import { DEFAULT_CONFIG } from '../types.ts';
 
 /** Config directory path */
 export const CONFIG_DIR = join(homedir(), '.trmnl');
 
-/** Config file path */
-export const CONFIG_PATH = join(CONFIG_DIR, 'config.toml');
+/** Config file path (now JSON) */
+export const CONFIG_PATH = join(CONFIG_DIR, 'config.json');
+
+/** Legacy TOML config path (for migration) */
+const LEGACY_CONFIG_PATH = join(CONFIG_DIR, 'config.toml');
 
 /** History file path */
 export const HISTORY_PATH = join(CONFIG_DIR, 'history.jsonl');
@@ -26,66 +31,42 @@ export function ensureConfigDir(): void {
 }
 
 /**
- * Simple TOML parser (handles our limited config format)
+ * Migrate legacy TOML config to JSON (one-time)
  */
-function parseTOML(content: string): Config {
-  const config: Config = {};
-  let currentSection: string | null = null;
+function migrateLegacyConfig(): Config | null {
+  if (!existsSync(LEGACY_CONFIG_PATH)) {
+    return null;
+  }
 
-  for (const line of content.split('\n')) {
-    const trimmed = line.trim();
-    
-    // Skip empty lines and comments
-    if (!trimmed || trimmed.startsWith('#')) continue;
-    
-    // Section header
-    const sectionMatch = trimmed.match(/^\[(\w+)\]$/);
-    if (sectionMatch) {
-      currentSection = sectionMatch[1];
-      if (currentSection === 'webhook') config.webhook = {};
-      if (currentSection === 'history') config.history = {};
-      continue;
+  try {
+    const content = readFileSync(LEGACY_CONFIG_PATH, 'utf-8');
+    const config: Config = { plugins: {} };
+
+    // Parse legacy TOML (simple parser for our format)
+    let webhookUrl: string | undefined;
+    let tier: WebhookTier = 'free';
+
+    for (const line of content.split('\n')) {
+      const trimmed = line.trim();
+      const urlMatch = trimmed.match(/^url\s*=\s*"([^"]+)"/);
+      if (urlMatch) webhookUrl = urlMatch[1];
+      const tierMatch = trimmed.match(/^tier\s*=\s*"([^"]+)"/);
+      if (tierMatch) tier = tierMatch[1] as WebhookTier;
     }
-    
-    // Key-value pair
-    const kvMatch = trimmed.match(/^(\w+)\s*=\s*"?([^"]*)"?$/);
-    if (kvMatch && currentSection) {
-      const [, key, value] = kvMatch;
-      if (currentSection === 'webhook' && config.webhook) {
-        if (key === 'url') config.webhook.url = value;
-        if (key === 'tier') config.webhook.tier = value as WebhookTier;
-      }
-      if (currentSection === 'history' && config.history) {
-        if (key === 'path') config.history.path = value;
-        if (key === 'maxSizeMb') config.history.maxSizeMb = parseInt(value, 10);
-      }
+
+    if (webhookUrl) {
+      config.plugins['default'] = { url: webhookUrl, tier };
+      config.defaultPlugin = 'default';
     }
+
+    // Remove legacy file after migration
+    unlinkSync(LEGACY_CONFIG_PATH);
+    console.log('Migrated legacy config.toml to config.json');
+
+    return config;
+  } catch {
+    return null;
   }
-
-  return config;
-}
-
-/**
- * Serialize config to TOML format
- */
-function serializeTOML(config: Config): string {
-  const lines: string[] = [];
-
-  if (config.webhook) {
-    lines.push('[webhook]');
-    if (config.webhook.url) lines.push(`url = "${config.webhook.url}"`);
-    if (config.webhook.tier) lines.push(`tier = "${config.webhook.tier}"`);
-    lines.push('');
-  }
-
-  if (config.history) {
-    lines.push('[history]');
-    if (config.history.path) lines.push(`path = "${config.history.path}"`);
-    if (config.history.maxSizeMb !== undefined) lines.push(`maxSizeMb = ${config.history.maxSizeMb}`);
-    lines.push('');
-  }
-
-  return lines.join('\n');
 }
 
 /**
@@ -93,16 +74,28 @@ function serializeTOML(config: Config): string {
  */
 export function loadConfig(): Config {
   ensureConfigDir();
-  
+
+  // Try to migrate legacy config first
+  const migrated = migrateLegacyConfig();
+  if (migrated) {
+    saveConfig(migrated);
+    return migrated;
+  }
+
   if (!existsSync(CONFIG_PATH)) {
-    return {};
+    return { ...DEFAULT_CONFIG };
   }
 
   try {
     const content = readFileSync(CONFIG_PATH, 'utf-8');
-    return parseTOML(content);
+    const parsed = JSON.parse(content) as Partial<Config>;
+    return {
+      plugins: parsed.plugins || {},
+      defaultPlugin: parsed.defaultPlugin,
+      history: parsed.history || DEFAULT_CONFIG.history,
+    };
   } catch {
-    return {};
+    return { ...DEFAULT_CONFIG };
   }
 }
 
@@ -111,72 +104,140 @@ export function loadConfig(): Config {
  */
 export function saveConfig(config: Config): void {
   ensureConfigDir();
-  const content = serializeTOML(config);
+  const content = JSON.stringify(config, null, 2);
   writeFileSync(CONFIG_PATH, content, 'utf-8');
 }
 
 /**
- * Get a specific config value
+ * Get a plugin by name (or default if not specified)
  */
-export function getConfigValue(key: string): string | undefined {
+export function getPlugin(name?: string): { name: string; plugin: Plugin } | null {
   const config = loadConfig();
   
-  if (key === 'webhook' || key === 'webhook.url') {
-    return config.webhook?.url;
+  // If name specified, use that
+  if (name) {
+    const plugin = config.plugins[name];
+    if (plugin) {
+      return { name, plugin };
+    }
+    return null;
   }
-  if (key === 'webhook.tier' || key === 'tier') {
-    return config.webhook?.tier;
+
+  // Use default plugin
+  const defaultName = config.defaultPlugin;
+  if (defaultName && config.plugins[defaultName]) {
+    return { name: defaultName, plugin: config.plugins[defaultName] };
   }
-  if (key === 'history.path') {
-    return config.history?.path;
+
+  // If only one plugin, use it
+  const pluginNames = Object.keys(config.plugins);
+  if (pluginNames.length === 1) {
+    const name = pluginNames[0];
+    return { name, plugin: config.plugins[name] };
   }
-  if (key === 'history.maxSizeMb') {
-    return config.history?.maxSizeMb?.toString();
-  }
-  
-  return undefined;
+
+  return null;
 }
 
 /**
- * Set a specific config value
+ * Add or update a plugin
  */
-export function setConfigValue(key: string, value: string): void {
+export function setPlugin(name: string, url: string, tier: WebhookTier = 'free', description?: string): void {
   const config = loadConfig();
+  config.plugins[name] = { url, tier, description };
   
-  if (key === 'webhook' || key === 'webhook.url') {
-    config.webhook = config.webhook || {};
-    config.webhook.url = value;
-  } else if (key === 'webhook.tier' || key === 'tier') {
-    config.webhook = config.webhook || {};
-    config.webhook.tier = value as WebhookTier;
-  } else if (key === 'history.path') {
-    config.history = config.history || {};
-    config.history.path = value;
-  } else if (key === 'history.maxSizeMb') {
-    config.history = config.history || {};
-    config.history.maxSizeMb = parseInt(value, 10);
+  // If no default and this is the first plugin, make it default
+  if (!config.defaultPlugin || Object.keys(config.plugins).length === 1) {
+    config.defaultPlugin = name;
   }
   
   saveConfig(config);
 }
 
 /**
- * Get webhook URL from config or environment
+ * Remove a plugin
  */
-export function getWebhookUrl(): string | undefined {
-  // Environment variable takes precedence
-  const envUrl = process.env.TRMNL_WEBHOOK;
-  if (envUrl) return envUrl;
+export function removePlugin(name: string): boolean {
+  const config = loadConfig();
   
-  // Fall back to config
-  return getConfigValue('webhook.url');
+  if (!config.plugins[name]) {
+    return false;
+  }
+  
+  delete config.plugins[name];
+  
+  // If we removed the default, pick a new one
+  if (config.defaultPlugin === name) {
+    const remaining = Object.keys(config.plugins);
+    config.defaultPlugin = remaining.length > 0 ? remaining[0] : undefined;
+  }
+  
+  saveConfig(config);
+  return true;
 }
 
 /**
- * Get tier from config (default: free)
+ * Set the default plugin
  */
-export function getTier(): WebhookTier {
-  const tier = getConfigValue('tier');
-  if (tier === 'plus') return 'plus';
-  return 'free';
+export function setDefaultPlugin(name: string): boolean {
+  const config = loadConfig();
+  
+  if (!config.plugins[name]) {
+    return false;
+  }
+  
+  config.defaultPlugin = name;
+  saveConfig(config);
+  return true;
+}
+
+/**
+ * List all plugins
+ */
+export function listPlugins(): Array<{ name: string; plugin: Plugin; isDefault: boolean }> {
+  const config = loadConfig();
+  return Object.entries(config.plugins).map(([name, plugin]) => ({
+    name,
+    plugin,
+    isDefault: name === config.defaultPlugin,
+  }));
+}
+
+/**
+ * Get webhook URL from environment, plugin name, or default
+ */
+export function getWebhookUrl(pluginName?: string): { url: string; name: string; tier: WebhookTier } | null {
+  // Environment variable takes highest precedence
+  const envUrl = process.env.TRMNL_WEBHOOK;
+  if (envUrl) {
+    return { url: envUrl, name: '$TRMNL_WEBHOOK', tier: 'free' };
+  }
+
+  // Try to get plugin
+  const result = getPlugin(pluginName);
+  if (result) {
+    return {
+      url: result.plugin.url,
+      name: result.name,
+      tier: result.plugin.tier || 'free',
+    };
+  }
+
+  return null;
+}
+
+/**
+ * Get history config
+ */
+export function getHistoryConfig(): { path: string; maxSizeMb: number } {
+  const config = loadConfig();
+  const historyPath = config.history?.path || DEFAULT_CONFIG.history!.path!;
+  const expandedPath = historyPath.startsWith('~') 
+    ? historyPath.replace('~', homedir())
+    : historyPath;
+  
+  return {
+    path: expandedPath,
+    maxSizeMb: config.history?.maxSizeMb || DEFAULT_CONFIG.history!.maxSizeMb!,
+  };
 }

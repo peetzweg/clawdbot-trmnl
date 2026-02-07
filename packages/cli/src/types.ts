@@ -11,12 +11,17 @@ export const TIER_LIMITS: Record<WebhookTier, number> = {
   plus: 5120,   // 5 KB
 };
 
-/** CLI configuration stored in ~/.trmnl/config.toml */
+/** Plugin configuration */
+export interface Plugin {
+  url: string;
+  tier?: WebhookTier;
+  description?: string;
+}
+
+/** CLI configuration stored in ~/.trmnl/config.json */
 export interface Config {
-  webhook?: {
-    url?: string;
-    tier?: WebhookTier;
-  };
+  plugins: Record<string, Plugin>;
+  defaultPlugin?: string;
   history?: {
     path?: string;
     maxSizeMb?: number;
@@ -24,11 +29,9 @@ export interface Config {
 }
 
 /** Default config values */
-export const DEFAULT_CONFIG: Required<Config> = {
-  webhook: {
-    url: '',
-    tier: 'free',
-  },
+export const DEFAULT_CONFIG: Config = {
+  plugins: {},
+  defaultPlugin: undefined,
   history: {
     path: '~/.trmnl/history.jsonl',
     maxSizeMb: 100,
@@ -52,6 +55,7 @@ export interface WebhookPayload {
 /** History entry stored in JSONL */
 export interface HistoryEntry {
   timestamp: string;
+  plugin: string;
   size_bytes: number;
   tier: WebhookTier;
   payload: WebhookPayload;

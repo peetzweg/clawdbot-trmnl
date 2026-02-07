@@ -15,14 +15,39 @@ npm install -g trmnl-cli
 ## Quick Start
 
 ```bash
-# Set your webhook URL
-trmnl config set webhook "https://trmnl.com/api/custom_plugins/YOUR_UUID"
+# Add your first plugin (webhook)
+trmnl plugin add home "https://trmnl.com/api/custom_plugins/YOUR_UUID"
 
 # Send content
 trmnl send --content '<div class="layout">Hello TRMNL!</div>'
 
 # Or from a file
 trmnl send --file ./output.html
+```
+
+## Plugins
+
+Manage multiple TRMNL displays/plugins with named webhooks:
+
+```bash
+# Add plugins
+trmnl plugin add home "https://trmnl.com/api/custom_plugins/abc123"
+trmnl plugin add office "https://trmnl.com/api/custom_plugins/xyz789" --tier plus
+
+# List plugins
+trmnl plugin list
+
+# Set default
+trmnl plugin default office
+
+# Send to specific plugin
+trmnl send --file output.html --plugin home
+
+# Update plugin
+trmnl plugin update home --tier plus
+
+# Remove plugin
+trmnl plugin remove office
 ```
 
 ## Commands
@@ -38,6 +63,9 @@ trmnl send --content "<div class=\"layout\">Hello</div>"
 # From file
 trmnl send --file ./output.html
 
+# To specific plugin
+trmnl send --file ./output.html --plugin office
+
 # From stdin (piped)
 echo '{"merge_variables":{"content":"..."}}' | trmnl send
 
@@ -48,7 +76,8 @@ trmnl send --file output.html --skip-validation --json
 Options:
 - `-c, --content <html>` - HTML content to send
 - `-f, --file <path>` - Read content from file
-- `-w, --webhook <url>` - Override webhook URL
+- `-p, --plugin <name>` - Plugin to use (default: default plugin)
+- `-w, --webhook <url>` - Override webhook URL directly
 - `--skip-validation` - Skip payload validation
 - `--skip-log` - Don't log to history
 - `--json` - Output result as JSON
@@ -68,26 +97,42 @@ Options:
 - `-t, --tier <tier>` - Check against tier limit (`free` or `plus`)
 - `--json` - Output result as JSON
 
-### `trmnl config`
+### `trmnl plugin`
 
-Manage CLI configuration.
+Manage webhook plugins.
 
 ```bash
-# Show all config
-trmnl config list
+# List plugins
+trmnl plugin list
+trmnl plugins
 
-# Get a value
-trmnl config get webhook
+# Add plugin
+trmnl plugin add <name> <url> [options]
+  -t, --tier <tier>       Tier (free or plus)
+  -d, --description <desc> Plugin description
+  --default               Set as default plugin
 
-# Set a value
-trmnl config set webhook "https://..."
-trmnl config set tier plus
+# Update plugin
+trmnl plugin update <name> [options]
+  -u, --url <url>         New webhook URL
+  -t, --tier <tier>       Tier (free or plus)
+  -d, --description <desc> Plugin description
 
-# Show config file path
-trmnl config path
+# Set default
+trmnl plugin default <name>
+
+# Remove plugin
+trmnl plugin remove <name>
 ```
 
-Config is stored in `~/.trmnl/config.toml`.
+### `trmnl config`
+
+Show configuration.
+
+```bash
+trmnl config        # Show all config
+trmnl config path   # Show config file path
+```
 
 ### `trmnl history`
 
@@ -104,6 +149,7 @@ trmnl history --last 20
 trmnl history --today
 trmnl history --failed
 trmnl history --success
+trmnl history --plugin office
 
 # Stats
 trmnl history stats
@@ -117,33 +163,45 @@ Options:
 - `--today` - Show only today's entries
 - `--failed` - Show only failed sends
 - `--success` - Show only successful sends
+- `-p, --plugin <name>` - Filter by plugin name
 - `-v, --verbose` - Show content preview
 - `--json` - Output as JSON
 
 ## Configuration
 
-### Config File (`~/.trmnl/config.toml`)
+### Config File (`~/.trmnl/config.json`)
 
-```toml
-[webhook]
-url = "https://trmnl.com/api/custom_plugins/..."
-tier = "free"  # or "plus"
-
-[history]
-path = "~/.trmnl/history.jsonl"
-maxSizeMb = 100
+```json
+{
+  "plugins": {
+    "home": {
+      "url": "https://trmnl.com/api/custom_plugins/...",
+      "tier": "free",
+      "description": "Living room display"
+    },
+    "office": {
+      "url": "https://trmnl.com/api/custom_plugins/...",
+      "tier": "plus"
+    }
+  },
+  "defaultPlugin": "home",
+  "history": {
+    "path": "~/.trmnl/history.jsonl",
+    "maxSizeMb": 100
+  }
+}
 ```
 
 ### Environment Variables
 
-- `TRMNL_WEBHOOK` - Webhook URL (overrides config file)
+- `TRMNL_WEBHOOK` - Webhook URL (overrides config, highest priority)
 
 ## History Format
 
 Sends are logged to `~/.trmnl/history.jsonl`:
 
 ```jsonl
-{"timestamp":"2026-02-07T10:00:00Z","size_bytes":1234,"tier":"free","payload":{...},"success":true,"status_code":200,"duration_ms":234}
+{"timestamp":"2026-02-07T10:00:00Z","plugin":"home","size_bytes":1234,"tier":"free","payload":{...},"success":true,"status_code":200,"duration_ms":234}
 ```
 
 ## Tier Limits

@@ -3,28 +3,15 @@
  */
 
 import { appendFileSync, existsSync, readFileSync, statSync } from 'node:fs';
-import { HISTORY_PATH, ensureConfigDir, loadConfig } from './config.ts';
+import { ensureConfigDir, getHistoryConfig } from './config.ts';
 import type { HistoryEntry } from '../types.ts';
-
-/**
- * Get the configured history file path
- */
-function getHistoryPath(): string {
-  const config = loadConfig();
-  const path = config.history?.path || HISTORY_PATH;
-  // Expand ~ to home directory
-  if (path.startsWith('~')) {
-    return path.replace('~', process.env.HOME || '');
-  }
-  return path;
-}
 
 /**
  * Append a history entry to the JSONL file
  */
 export function logEntry(entry: HistoryEntry): void {
   ensureConfigDir();
-  const path = getHistoryPath();
+  const { path } = getHistoryConfig();
   const line = JSON.stringify(entry) + '\n';
   appendFileSync(path, line, 'utf-8');
 }
@@ -33,7 +20,7 @@ export function logEntry(entry: HistoryEntry): void {
  * Read all history entries
  */
 export function readHistory(): HistoryEntry[] {
-  const path = getHistoryPath();
+  const { path } = getHistoryConfig();
   
   if (!existsSync(path)) {
     return [];
@@ -56,12 +43,18 @@ export interface HistoryFilter {
   today?: boolean;
   failed?: boolean;
   success?: boolean;
+  plugin?: string;
   since?: Date;
   until?: Date;
 }
 
 export function getHistory(filter: HistoryFilter = {}): HistoryEntry[] {
   let entries = readHistory();
+
+  // Filter by plugin
+  if (filter.plugin) {
+    entries = entries.filter(e => e.plugin === filter.plugin);
+  }
 
   // Filter by success/failed
   if (filter.failed) {
@@ -103,7 +96,7 @@ export function formatEntry(entry: HistoryEntry, verbose = false): string {
   const status = entry.success ? '✓' : '✗';
   const sizeKb = (entry.size_bytes / 1024).toFixed(2);
   
-  let line = `${status} ${time} | ${sizeKb} KB | ${entry.duration_ms}ms`;
+  let line = `${status} ${time} | ${entry.plugin} | ${sizeKb} KB | ${entry.duration_ms}ms`;
   
   if (!entry.success && entry.error) {
     line += ` | ${entry.error}`;
@@ -121,7 +114,7 @@ export function formatEntry(entry: HistoryEntry, verbose = false): string {
  * Get history file stats
  */
 export function getHistoryStats(): { entries: number; sizeBytes: number; sizeMb: number } | null {
-  const path = getHistoryPath();
+  const { path } = getHistoryConfig();
   
   if (!existsSync(path)) {
     return null;
@@ -138,4 +131,11 @@ export function getHistoryStats(): { entries: number; sizeBytes: number; sizeMb:
   } catch {
     return null;
   }
+}
+
+/**
+ * Get history file path
+ */
+export function getHistoryPath(): string {
+  return getHistoryConfig().path;
 }

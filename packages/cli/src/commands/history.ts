@@ -2,15 +2,16 @@
  * trmnl history - View send history
  */
 
+import { unlinkSync } from 'node:fs';
 import type { CAC } from 'cac';
-import { HISTORY_PATH } from '../lib/config.ts';
-import { formatEntry, getHistory, getHistoryStats, type HistoryFilter } from '../lib/logger.ts';
+import { formatEntry, getHistory, getHistoryPath, getHistoryStats, type HistoryFilter } from '../lib/logger.ts';
 
 interface HistoryOptions {
   last?: number;
   today?: boolean;
   failed?: boolean;
   success?: boolean;
+  plugin?: string;
   json?: boolean;
   verbose?: boolean;
 }
@@ -22,17 +23,20 @@ export function registerHistoryCommand(cli: CAC): void {
     .option('--today', 'Show only today\'s entries')
     .option('--failed', 'Show only failed sends')
     .option('--success', 'Show only successful sends')
+    .option('-p, --plugin <name>', 'Filter by plugin name')
     .option('--json', 'Output as JSON')
     .option('-v, --verbose', 'Show content preview')
     .example('trmnl history')
     .example('trmnl history --last 20')
     .example('trmnl history --today --failed')
+    .example('trmnl history --plugin office')
     .action((options: HistoryOptions) => {
       const filter: HistoryFilter = {
         last: options.last,
         today: options.today,
         failed: options.failed,
         success: options.success,
+        plugin: options.plugin,
       };
 
       const entries = getHistory(filter);
@@ -44,7 +48,7 @@ export function registerHistoryCommand(cli: CAC): void {
 
       if (entries.length === 0) {
         console.log('No history entries found.');
-        console.log(`History file: ${HISTORY_PATH}`);
+        console.log(`History file: ${getHistoryPath()}`);
         return;
       }
 
@@ -60,6 +64,7 @@ export function registerHistoryCommand(cli: CAC): void {
       if (options.today) filterParts.push('today');
       if (options.failed) filterParts.push('failed');
       if (options.success) filterParts.push('success');
+      if (options.plugin) filterParts.push(`plugin: ${options.plugin}`);
       if (filterParts.length > 0) {
         console.log(`Filter: ${filterParts.join(', ')}`);
         console.log('');
@@ -79,15 +84,16 @@ export function registerHistoryCommand(cli: CAC): void {
     .command('history clear', 'Clear send history')
     .option('--confirm', 'Confirm deletion')
     .action((options: { confirm?: boolean }) => {
+      const historyPath = getHistoryPath();
+      
       if (!options.confirm) {
         console.log('This will delete all history. Use --confirm to proceed.');
-        console.log(`History file: ${HISTORY_PATH}`);
+        console.log(`History file: ${historyPath}`);
         return;
       }
 
-      const fs = require('node:fs');
       try {
-        fs.unlinkSync(HISTORY_PATH);
+        unlinkSync(historyPath);
         console.log('✓ History cleared');
       } catch (err) {
         if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
@@ -118,17 +124,31 @@ export function registerHistoryCommand(cli: CAC): void {
         ? Math.round(entries.reduce((sum, e) => sum + e.duration_ms, 0) / entries.length) 
         : 0;
 
+      // Plugin breakdown
+      const byPlugin = new Map<string, number>();
+      for (const entry of entries) {
+        byPlugin.set(entry.plugin, (byPlugin.get(entry.plugin) || 0) + 1);
+      }
+
       console.log('History Statistics');
       console.log('');
-      console.log(`File:     ${HISTORY_PATH}`);
+      console.log(`File:     ${getHistoryPath()}`);
       console.log(`Size:     ${stats.sizeMb} MB`);
       console.log('');
       console.log(`Total:    ${entries.length} sends`);
-      console.log(`Success:  ${successCount} (${Math.round(successCount / entries.length * 100)}%)`);
-      console.log(`Failed:   ${failedCount} (${Math.round(failedCount / entries.length * 100)}%)`);
+      console.log(`Success:  ${successCount} (${entries.length > 0 ? Math.round(successCount / entries.length * 100) : 0}%)`);
+      console.log(`Failed:   ${failedCount} (${entries.length > 0 ? Math.round(failedCount / entries.length * 100) : 0}%)`);
       console.log('');
       console.log(`Avg size:     ${avgBytes} bytes`);
       console.log(`Avg duration: ${avgDuration}ms`);
+
+      if (byPlugin.size > 1) {
+        console.log('');
+        console.log('By plugin:');
+        for (const [plugin, count] of byPlugin.entries()) {
+          console.log(`  ${plugin}: ${count} sends`);
+        }
+      }
 
       // Recent activity
       const today = getHistory({ today: true });

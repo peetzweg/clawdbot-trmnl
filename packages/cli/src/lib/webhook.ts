@@ -2,13 +2,14 @@
  * Webhook sending logic
  */
 
-import { getTier, getWebhookUrl } from './config.ts';
+import { getWebhookUrl } from './config.ts';
 import { logEntry } from './logger.ts';
 import { validatePayload } from './validator.ts';
-import type { HistoryEntry, WebhookPayload } from '../types.ts';
+import type { HistoryEntry, WebhookPayload, WebhookTier } from '../types.ts';
 
 export interface SendResult {
   success: boolean;
+  pluginName: string;
   statusCode?: number;
   response?: string;
   error?: string;
@@ -16,16 +17,60 @@ export interface SendResult {
   validation: ReturnType<typeof validatePayload>;
 }
 
+export interface SendOptions {
+  plugin?: string;        // Plugin name to use
+  webhookUrl?: string;    // Direct URL override
+  tier?: WebhookTier;     // Tier override
+  skipValidation?: boolean;
+  skipLog?: boolean;
+}
+
 /**
  * Send payload to TRMNL webhook
  */
 export async function sendToWebhook(
   payload: WebhookPayload,
-  options: { skipValidation?: boolean; skipLog?: boolean; webhookUrl?: string } = {}
+  options: SendOptions = {}
 ): Promise<SendResult> {
   const startTime = Date.now();
-  const tier = getTier();
   
+  // Resolve webhook URL and tier
+  let webhookUrl: string;
+  let pluginName: string;
+  let tier: WebhookTier;
+
+  if (options.webhookUrl) {
+    // Direct URL override
+    webhookUrl = options.webhookUrl;
+    pluginName = 'custom';
+    tier = options.tier || 'free';
+  } else {
+    // Get from config/env
+    const resolved = getWebhookUrl(options.plugin);
+    if (!resolved) {
+      const durationMs = Date.now() - startTime;
+      const validation = validatePayload(payload, 'free');
+      
+      let error = 'No webhook URL configured.';
+      if (options.plugin) {
+        error = `Plugin "${options.plugin}" not found.`;
+      } else {
+        error += ' Add a plugin with: trmnl plugin add <name> <url>';
+      }
+      
+      return {
+        success: false,
+        pluginName: options.plugin || 'unknown',
+        error,
+        durationMs,
+        validation,
+      };
+    }
+    webhookUrl = resolved.url;
+    pluginName = resolved.name;
+    tier = options.tier || resolved.tier;
+  }
+
   // Validate payload
   const validation = validatePayload(payload, tier);
   
@@ -33,6 +78,7 @@ export async function sendToWebhook(
     const durationMs = Date.now() - startTime;
     const result: SendResult = {
       success: false,
+      pluginName,
       error: validation.errors.join('; '),
       durationMs,
       validation,
@@ -40,23 +86,10 @@ export async function sendToWebhook(
     
     // Log failed validation
     if (!options.skipLog) {
-      logEntry(createHistoryEntry(payload, result, tier));
+      logEntry(createHistoryEntry(payload, result, tier, pluginName));
     }
     
     return result;
-  }
-  
-  // Get webhook URL
-  const webhookUrl = options.webhookUrl || getWebhookUrl();
-  
-  if (!webhookUrl) {
-    const durationMs = Date.now() - startTime;
-    return {
-      success: false,
-      error: 'No webhook URL configured. Set TRMNL_WEBHOOK env var or run: trmnl config set webhook <url>',
-      durationMs,
-      validation,
-    };
   }
   
   // Send request
@@ -74,6 +107,7 @@ export async function sendToWebhook(
     
     const result: SendResult = {
       success: response.ok,
+      pluginName,
       statusCode: response.status,
       response: responseText,
       durationMs,
@@ -86,7 +120,7 @@ export async function sendToWebhook(
     
     // Log the send
     if (!options.skipLog) {
-      logEntry(createHistoryEntry(payload, result, tier));
+      logEntry(createHistoryEntry(payload, result, tier, pluginName));
     }
     
     return result;
@@ -97,6 +131,7 @@ export async function sendToWebhook(
     
     const result: SendResult = {
       success: false,
+      pluginName,
       error,
       durationMs,
       validation,
@@ -104,7 +139,7 @@ export async function sendToWebhook(
     
     // Log the error
     if (!options.skipLog) {
-      logEntry(createHistoryEntry(payload, result, tier));
+      logEntry(createHistoryEntry(payload, result, tier, pluginName));
     }
     
     return result;
@@ -117,10 +152,12 @@ export async function sendToWebhook(
 function createHistoryEntry(
   payload: WebhookPayload,
   result: SendResult,
-  tier: ReturnType<typeof getTier>
+  tier: WebhookTier,
+  pluginName: string
 ): HistoryEntry {
   return {
     timestamp: new Date().toISOString(),
+    plugin: pluginName,
     size_bytes: result.validation.size_bytes,
     tier,
     payload,
