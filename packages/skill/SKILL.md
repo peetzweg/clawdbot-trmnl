@@ -9,14 +9,9 @@ Generate HTML content for TRMNL e-ink display devices.
 
 ## Prerequisites
 
-**Verify the `trmnl` CLI is installed:**
+**Install the `trmnl` CLI to the latest version:**
 ```bash
-trmnl --version
-```
-
-If not installed or command not found, install via npm:
-```bash
-npm install -g trmnl-cli
+npm install -g trmnl-cli@latest
 ```
 
 **Configure a webhook plugin (one-time setup):**
@@ -30,7 +25,7 @@ trmnl plugin
 
 ## Quick Start Workflow
 
-1. **Verify CLI:** Run `trmnl --version` - if missing, prompt user to install
+1. **Install/update CLI:** Run `npm install -g trmnl-cli@latest`
 2. **Check plugins:** Run `trmnl plugin` - if none, prompt user to add one
 3. Confirm device type (default: TRMNL OG, 2-bit, 800x480)
 4. Read relevant reference docs based on content needs
@@ -182,7 +177,7 @@ Use dithered classes, not inline colors:
 
 | Problem | Solution |
 |---------|----------|
-| `trmnl: command not found` | Run `npm install -g trmnl-cli` |
+| `trmnl: command not found` | Run `npm install -g trmnl-cli@latest` |
 | No plugins configured | Run `trmnl plugin add <name> <url>` |
 | Webhook fails | `trmnl config` - verify plugin URL |
 | Payload too large | `trmnl validate --file` - check size |
