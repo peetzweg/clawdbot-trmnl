@@ -2,42 +2,48 @@
   "name": "trmnl-cli",
   "version": "0.1.0",
   "description": "CLI tool for TRMNL e-ink displays - send, validate, and track payloads",
+  "author": "peetzweg",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/peetzweg/openclaw-trmnl"
+  },
+  "homepage": "https://github.com/peetzweg/openclaw-trmnl#readme",
+  "bugs": {
+    "url": "https://github.com/peetzweg/openclaw-trmnl/issues"
+  },
+  "keywords": [
+    "trmnl",
+    "e-ink",
+    "cli",
+    "display",
+    "webhook",
+    "dashboard"
+  ],
   "type": "module",
   "bin": {
-    "trmnl": "./bin/trmnl"
+    "trmnl": "./bin/trmnl.mjs"
   },
   "exports": {
     ".": "./src/index.ts"
   },
+  "files": [
+    "bin",
+    "src",
+    "README.md"
+  ],
   "scripts": {
-    "build": "bun build ./src/index.ts --outdir ./dist --target node",
-    "typecheck": "tsc --noEmit",
-    "clean": "rm -rf dist"
+    "start": "node --experimental-strip-types ./src/index.ts",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "cac": "^6.7.14"
   },
   "devDependencies": {
-    "@types/bun": "latest",
+    "@types/node": "^22.0.0",
     "typescript": "^5.0.0"
   },
   "engines": {
-    "node": ">=18"
-  },
-  "files": [
-    "bin",
-    "src",
-    "dist"
-  ],
-  "keywords": [
-    "trmnl",
-    "e-ink",
-    "cli",
-    "display"
-  ],
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/peetzweg/openclaw-trmnl"
+    "node": ">=22.6.0"
   }
 }

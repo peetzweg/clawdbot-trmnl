@@ -40,8 +40,10 @@ This monorepo contains two packages:
 ### Install the CLI
 
 ```bash
-bun install -g trmnl-cli
+npm install -g trmnl-cli
 ```
+
+Requires Node.js 22.6.0 or later.
 
 ### Configure your webhook
 

@@ -9,38 +9,39 @@ Generate HTML content for TRMNL e-ink display devices.
 
 ## Prerequisites
 
-The `trmnl` CLI must be installed. Check with:
+**Verify the `trmnl` CLI is installed:**
 ```bash
 trmnl --version
 ```
 
-If not installed, install via:
+If not installed or command not found, install via npm:
 ```bash
-bun install -g trmnl-cli
+npm install -g trmnl-cli
 ```
 
-Configure webhook plugin (one-time setup):
+**Configure a webhook plugin (one-time setup):**
 ```bash
 # Add a plugin
 trmnl plugin add home "https://trmnl.com/api/custom_plugins/{uuid}"
 
-# For TRMNL+ users with larger payloads
-trmnl plugin add office "https://..." --tier plus
+# Verify it's configured
+trmnl plugin
 ```
 
 ## Quick Start Workflow
 
-1. **First run:** Ensure plugin is configured (`trmnl plugin` to list)
-2. Confirm device type (default: TRMNL OG, 2-bit, 800x480)
-3. Read relevant reference docs based on content needs
-4. Generate HTML using TRMNL framework classes
-5. Write HTML to a temp file and send:
+1. **Verify CLI:** Run `trmnl --version` - if missing, prompt user to install
+2. **Check plugins:** Run `trmnl plugin` - if none, prompt user to add one
+3. Confirm device type (default: TRMNL OG, 2-bit, 800x480)
+4. Read relevant reference docs based on content needs
+5. Generate HTML using TRMNL framework classes
+6. Write HTML to a temp file and send:
    ```bash
    trmnl send --file /tmp/trmnl-content.html
    # Or to a specific plugin:
    trmnl send --file /tmp/trmnl-content.html --plugin office
    ```
-6. **Minimal confirmation only** - Do NOT echo content back to chat
+7. **Minimal confirmation only** - Do NOT echo content back to chat
 
 ## Sending Content
 
@@ -81,9 +82,9 @@ trmnl history --failed
 | Free | **2 KB** (2,048 bytes) | 12 requests/hour |
 | TRMNL+ | **5 KB** (5,120 bytes) | 30 requests/hour |
 
-Set tier in config for accurate validation:
+Set tier globally for accurate validation:
 ```bash
-trmnl config set tier plus  # or "free"
+trmnl tier plus  # or "free"
 ```
 
 ## Reference Documentation
@@ -181,7 +182,9 @@ Use dithered classes, not inline colors:
 
 | Problem | Solution |
 |---------|----------|
-| Webhook fails | `trmnl config list` - verify URL |
+| `trmnl: command not found` | Run `npm install -g trmnl-cli` |
+| No plugins configured | Run `trmnl plugin add <name> <url>` |
+| Webhook fails | `trmnl config` - verify plugin URL |
 | Payload too large | `trmnl validate --file` - check size |
 | Numbers misaligned | Add `value--tnums` class |
 | Send history | `trmnl history --failed` |

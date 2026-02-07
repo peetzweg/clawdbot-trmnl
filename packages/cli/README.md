@@ -5,12 +5,10 @@ CLI tool for [TRMNL](https://usetrmnl.com) e-ink displays. Send, validate, and t
 ## Installation
 
 ```bash
-# With bun (recommended)
-bun install -g trmnl-cli
-
-# With npm
 npm install -g trmnl-cli
 ```
+
+Requires Node.js 22.6.0 or later.
 
 ## Quick Start
 
@@ -181,7 +179,7 @@ trmnl history clear --confirm  # Clear history
 
 Set your tier globally:
 ```bash
-trmnl config tier plus
+trmnl tier plus
 ```
 
 ## History
