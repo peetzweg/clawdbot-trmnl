@@ -19,20 +19,26 @@ If not installed, install via:
 bun install -g trmnl-cli
 ```
 
-Configure webhook URL (one-time setup):
+Configure webhook plugin (one-time setup):
 ```bash
-trmnl config set webhook "https://trmnl.com/api/custom_plugins/{uuid}"
+# Add a plugin
+trmnl plugin add home "https://trmnl.com/api/custom_plugins/{uuid}"
+
+# For TRMNL+ users with larger payloads
+trmnl plugin add office "https://..." --tier plus
 ```
 
 ## Quick Start Workflow
 
-1. **First run:** Ensure webhook is configured (`trmnl config list`)
+1. **First run:** Ensure plugin is configured (`trmnl plugin` to list)
 2. Confirm device type (default: TRMNL OG, 2-bit, 800x480)
 3. Read relevant reference docs based on content needs
 4. Generate HTML using TRMNL framework classes
 5. Write HTML to a temp file and send:
    ```bash
    trmnl send --file /tmp/trmnl-content.html
+   # Or to a specific plugin:
+   trmnl send --file /tmp/trmnl-content.html --plugin office
    ```
 6. **Minimal confirmation only** - Do NOT echo content back to chat
 
