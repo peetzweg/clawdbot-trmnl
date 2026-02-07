@@ -41,8 +41,9 @@ export function validatePayload(payload: WebhookPayload, tier: WebhookTier = 'fr
       warnings.push(`Potential unclosed divs: ${openDivs} open, ${closeDivs} close`);
     }
 
-    // Check for common TRMNL patterns
-    if (!content.includes('class="layout"') && !content.includes("class='layout'")) {
+    // Check for common TRMNL patterns - look for 'layout' as a class (may have other classes too)
+    const hasLayoutClass = /class=["'][^"']*\blayout\b[^"']*["']/.test(content);
+    if (!hasLayoutClass) {
       warnings.push('Missing .layout class - TRMNL requires a root layout element');
     }
   }
