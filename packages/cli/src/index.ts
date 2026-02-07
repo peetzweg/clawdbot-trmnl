@@ -1,7 +1,6 @@
-#!/usr/bin/env bun
 /**
  * trmnl-cli - CLI tool for TRMNL e-ink displays
- * 
+ *
  * Commands:
  *   trmnl send       - Send content to TRMNL display
  *   trmnl validate   - Validate payload without sending
@@ -9,16 +8,19 @@
  *   trmnl history    - View send history
  */
 
-import cac from 'cac';
-import { registerConfigCommand } from './commands/config.ts';
-import { registerHistoryCommand } from './commands/history.ts';
-import { registerSendCommand } from './commands/send.ts';
-import { registerValidateCommand } from './commands/validate.ts';
+import { createRequire } from "node:module";
+import cac from "cac";
+import { registerConfigCommand } from "./commands/config.ts";
+import { registerHistoryCommand } from "./commands/history.ts";
+import { registerSendCommand } from "./commands/send.ts";
+import { registerValidateCommand } from "./commands/validate.ts";
 
-const cli = cac('trmnl');
+const require = createRequire(import.meta.url);
+const { version } = require("../package.json");
 
-// Version from package.json
-cli.version('0.1.0');
+const cli = cac("trmnl");
+
+cli.version(version);
 
 // Register commands
 registerSendCommand(cli);
@@ -30,7 +32,7 @@ registerHistoryCommand(cli);
 cli.help();
 
 // Default action (no command)
-cli.command('').action(() => {
+cli.command("").action(() => {
   cli.outputHelp();
 });
 
