@@ -16,6 +16,8 @@ interface SendOptions {
   skipLog?: boolean;
   noMinify?: boolean;
   json?: boolean;
+  preview?: boolean;
+  force?: boolean;
 }
 
 export function registerSendCommand(cli: CAC): void {
@@ -28,6 +30,8 @@ export function registerSendCommand(cli: CAC): void {
     .option('--skip-validation', 'Skip payload validation')
     .option('--skip-log', 'Skip history logging')
     .option('--no-minify', 'Disable HTML minification (enabled by default)')
+    .option('--preview', 'Preview render before sending (blocks on overflow)')
+    .option('--force', 'Send even if preview detects overflow')
     .option('--json', 'Output result as JSON')
     .example('trmnl send --content "<div class=\\"layout\\">Hello</div>"')
     .example('trmnl send --file ./output.html')
@@ -52,6 +56,39 @@ export function registerSendCommand(cli: CAC): void {
         if (!content) {
           console.error('No content provided. Use --content, --file, or pipe content via stdin.');
           process.exit(1);
+        }
+      }
+
+      // Preview check if requested
+      if (options.preview) {
+        try {
+          const renderer = await import('trmnl-renderer');
+          const previewResult = await renderer.render(content);
+
+          if (previewResult.overflow.overflows) {
+            console.error('\u26a0 Preview detected overflow:');
+            if (previewResult.overflow.right > 0) {
+              console.error(`  Right: +${previewResult.overflow.right}px beyond viewport`);
+            }
+            if (previewResult.overflow.bottom > 0) {
+              console.error(`  Bottom: +${previewResult.overflow.bottom}px beyond viewport`);
+            }
+            console.error(`  Screenshot: ${previewResult.screenshotPath}`);
+
+            if (!options.force) {
+              console.error('\nSend blocked. Use --force to send anyway.');
+              process.exit(1);
+            }
+            console.log('  Sending anyway (--force)');
+          } else if (!options.json) {
+            console.log(`\u2713 Preview OK (${previewResult.renderTimeMs}ms)`);
+          }
+        } catch (error) {
+          console.error(`\u26a0 Preview failed: ${error instanceof Error ? error.message : error}`);
+          if (!options.force) {
+            console.error('Send blocked. Use --force to skip preview.');
+            process.exit(1);
+          }
         }
       }
 

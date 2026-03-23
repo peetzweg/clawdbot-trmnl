@@ -11,7 +11,9 @@
 import { createRequire } from "node:module";
 import cac from "cac";
 import { registerConfigCommand } from "./commands/config.ts";
+import { registerFrameworkCommand } from "./commands/framework.ts";
 import { registerHistoryCommand } from "./commands/history.ts";
+import { registerPreviewCommand } from "./commands/preview.ts";
 import { registerSendCommand } from "./commands/send.ts";
 import { registerValidateCommand } from "./commands/validate.ts";
 
@@ -25,6 +27,8 @@ cli.version(version);
 // Register commands
 registerSendCommand(cli);
 registerValidateCommand(cli);
+registerPreviewCommand(cli);
+registerFrameworkCommand(cli);
 registerConfigCommand(cli);
 registerHistoryCommand(cli);
 
