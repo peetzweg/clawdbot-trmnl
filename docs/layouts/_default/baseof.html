@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+
+        <title>trmnl-cli</title>
+        <meta name="twitter:card" content="summary">
+        <meta name="twitter:title" content="trmnl-cli" />
+        <meta property="og:title"  content="trmnl-cli" />
+
+        <meta name="description"         content="CLI tool for TRMNL e-ink displays. Send, validate, preview, and track payloads to your e-ink display — all from your terminal." />
+        <meta name="twitter:description" content="CLI tool for TRMNL e-ink displays." />
+        <meta property="og:description"  content="CLI tool for TRMNL e-ink displays. Send, validate, preview, and track payloads to your e-ink display — all from your terminal." />
+
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400..800;1,400..800&display=swap" rel="stylesheet">
+
+        <link rel="stylesheet" media="screen" href="{{ "css/main.css" | absURL }}">
+        <link rel="stylesheet" media="print" href="{{ "css/print.css" | absURL }}">
+    </head>
+    <body>
+        {{- block "main" . }}{{- end }}
+
+        <footer>
+            <p>Site design adapted from <a href="https://clig.dev">CLI Guidelines</a> (<a href="https://github.com/cli-guidelines/cli-guidelines">source</a>).</p>
+        </footer>
+
+        {{ $js := resources.Get "js/main.js" }}
+        <script src="{{ $js.Permalink }}"></script>
+    </body>
+</html>

@@ -6,11 +6,12 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/peetzweg/openclaw-trmnl"
+    "url": "https://github.com/peetzweg/clawdbot-trmnl",
+    "directory": "packages/cli"
   },
-  "homepage": "https://github.com/peetzweg/openclaw-trmnl#readme",
+  "homepage": "https://github.com/peetzweg/clawdbot-trmnl#readme",
   "bugs": {
-    "url": "https://github.com/peetzweg/openclaw-trmnl/issues"
+    "url": "https://github.com/peetzweg/clawdbot-trmnl/issues"
   },
   "keywords": [
     "trmnl",
@@ -41,11 +42,11 @@
     "prepublishOnly": "pnpm run build"
   },
   "dependencies": {
-    "cac": "^6.7.14",
-    "trmnl-renderer": "workspace:*"
+    "cac": "^6.7.14"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
+    "trmnl-renderer": "workspace:*",
     "tsup": "^8.0.0",
     "tsx": "^4.0.0",
     "typescript": "^5.0.0",

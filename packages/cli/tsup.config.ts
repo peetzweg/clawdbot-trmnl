@@ -8,5 +8,7 @@ export default defineConfig({
   outDir: 'dist',
   clean: true,
   sourcemap: true,
+  noExternal: ['trmnl-renderer'],
+  external: ['playwright'],
   // Shebang in src/index.ts is preserved; tsup makes output executable
 });
