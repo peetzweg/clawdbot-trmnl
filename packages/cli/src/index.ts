@@ -4,6 +4,8 @@
  * Commands:
  *   trmnl send       - Send content to TRMNL display
  *   trmnl validate   - Validate payload without sending
+ *   trmnl preview    - Render and screenshot content locally
+ *   trmnl framework  - Manage cached TRMNL CSS/JS framework
  *   trmnl config     - Manage CLI configuration
  *   trmnl history    - View send history
  */
