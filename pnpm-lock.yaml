@@ -17,13 +17,13 @@ importers:
       cac:
         specifier: ^6.7.14
         version: 6.7.14
-      trmnl-renderer:
-        specifier: workspace:*
-        version: link:../renderer
     devDependencies:
       '@types/node':
         specifier: ^22.0.0
         version: 22.19.9
+      trmnl-renderer:
+        specifier: workspace:*
+        version: link:../renderer
       tsup:
         specifier: ^8.0.0
         version: 8.5.1(postcss@8.5.8)(tsx@4.21.0)(typescript@5.9.3)
