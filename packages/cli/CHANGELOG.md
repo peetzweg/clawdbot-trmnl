@@ -1,5 +1,11 @@
 # trmnl-cli
 
+## 0.1.6
+
+### Patch Changes
+
+- 0a5549f: Extract shared readStdin utility from send and preview commands
+
 ## 0.1.4
 
 ### Patch Changes
