@@ -26,7 +26,7 @@ jobs:
       - run: pnpm run typecheck
 
       - name: Install Playwright browsers
-        run: npx playwright install --with-deps chromium
+        run: pnpm --filter trmnl-renderer exec playwright install --with-deps chromium
 
       - name: Run tests
         run: pnpm -r test
