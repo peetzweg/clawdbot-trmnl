@@ -8,6 +8,7 @@
     "skipLibCheck": true,
     "noEmit": true,
     "declaration": true,
+    "allowImportingTsExtensions": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noUncheckedIndexedAccess": true

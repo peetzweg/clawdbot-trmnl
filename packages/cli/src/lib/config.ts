@@ -130,8 +130,8 @@ export function getPlugin(name?: string): { name: string; plugin: Plugin } | nul
   // If only one plugin, use it
   const pluginNames = Object.keys(config.plugins);
   if (pluginNames.length === 1) {
-    const name = pluginNames[0];
-    return { name, plugin: config.plugins[name] };
+    const name = pluginNames[0]!;
+    return { name, plugin: config.plugins[name]! };
   }
 
   return null;

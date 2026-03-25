@@ -9,7 +9,7 @@
  */
 
 import { createRequire } from "node:module";
-import cac from "cac";
+import { cac } from "cac";
 import { registerConfigCommand } from "./commands/config.ts";
 import { registerFrameworkCommand } from "./commands/framework.ts";
 import { registerHistoryCommand } from "./commands/history.ts";
