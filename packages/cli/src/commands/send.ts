@@ -4,6 +4,7 @@
 
 import { readFileSync } from 'node:fs';
 import type { CAC } from 'cac';
+import { readStdin } from '../lib/stdin.ts';
 import { createPayload, formatValidation } from '../lib/validator.ts';
 import { sendToWebhook } from '../lib/webhook.ts';
 
@@ -128,27 +129,3 @@ export function registerSendCommand(cli: CAC): void {
     });
 }
 
-/**
- * Read content from stdin (non-blocking check)
- */
-async function readStdin(): Promise<string> {
-  // Check if stdin has data (not a TTY)
-  if (process.stdin.isTTY) {
-    return '';
-  }
-
-  const chunks: Buffer[] = [];
-  
-  return new Promise((resolve) => {
-    process.stdin.on('data', (chunk) => chunks.push(chunk));
-    process.stdin.on('end', () => resolve(Buffer.concat(chunks).toString('utf-8').trim()));
-    process.stdin.on('error', () => resolve(''));
-    
-    // Timeout to avoid hanging
-    setTimeout(() => {
-      if (chunks.length === 0) {
-        resolve('');
-      }
-    }, 100);
-  });
-}

@@ -5,6 +5,7 @@
 import { readFileSync } from 'node:fs';
 import { exec } from 'node:child_process';
 import type { CAC } from 'cac';
+import { readStdin } from '../lib/stdin.ts';
 
 interface PreviewOptions {
   content?: string;
@@ -148,22 +149,3 @@ export function registerPreviewCommand(cli: CAC): void {
     });
 }
 
-async function readStdin(): Promise<string> {
-  if (process.stdin.isTTY) {
-    return '';
-  }
-
-  const chunks: Buffer[] = [];
-
-  return new Promise((resolve) => {
-    process.stdin.on('data', (chunk) => chunks.push(chunk));
-    process.stdin.on('end', () => resolve(Buffer.concat(chunks).toString('utf-8').trim()));
-    process.stdin.on('error', () => resolve(''));
-
-    setTimeout(() => {
-      if (chunks.length === 0) {
-        resolve('');
-      }
-    }, 100);
-  });
-}
