@@ -1,6 +1,6 @@
 {
   "name": "trmnl-cli",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "CLI tool for TRMNL e-ink displays - send, validate, and track payloads",
   "author": "peetzweg",
   "license": "MIT",
